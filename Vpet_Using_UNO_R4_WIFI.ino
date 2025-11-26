@@ -192,7 +192,7 @@ void setup() {
 		Serial.println("SD卡初始化失败！");
 		while (1);
 	}
-	Serial.println("SD卡初始化成功");
+	Serial.println("SD����ʼ���ɹ�");
 
 	// 再初始化屏幕和触摸
 	ts.begin();
