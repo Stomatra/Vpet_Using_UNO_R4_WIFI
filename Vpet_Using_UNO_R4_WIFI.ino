@@ -77,7 +77,7 @@ public:
 	uint16_t touch() {
 		touched = true;
 		touchCount++;
-		touched_state = random(0, 5);//最大的状态数量是5
+		touched_state = random(0, 5);//����״̬������5
 		return touched_state;
 	}
 
@@ -107,35 +107,35 @@ void DrawImage(Status status) {
 	}
 }
 
-// BMP图片显示函数（简化版，适用于24位BMP，320x240）
+// BMPͼƬ��ʾ�������򻯰棬������24λBMP��320x240��
 void drawBmp(const char* filename, int x, int y) {
 	File bmpFile;
-	int bmpWidth, bmpHeight;   // 图片宽高
-	uint8_t bmpDepth;          // 色深
-	uint32_t bmpImageoffset;   // 数据偏移
-	uint32_t rowSize;          // 每行字节数
-	uint8_t sdbuffer[3 * 320];   // 一行像素缓存
+	int bmpWidth, bmpHeight;   // ͼƬ���
+	uint8_t bmpDepth;          // ɫ��
+	uint32_t bmpImageoffset;   // ����ƫ��
+	uint32_t rowSize;          // ÿ���ֽ���
+	uint8_t sdbuffer[3 * 320];   // һ�����ػ���
 	uint8_t buffidx = sizeof(sdbuffer);
 	bool goodBmp = false;
 
 	bmpFile = SD.open(filename);
 	if (!bmpFile) {
-		Serial.print("找不到图片文件: ");
+		Serial.print("�Ҳ���ͼƬ�ļ�: ");
 		Serial.println(filename);
 		return;
 	}
 
-	// BMP头解析
-	if (read16(bmpFile) == 0x4D42) { // BMP签名
-		(void)read32(bmpFile); // 文件大小
-		(void)read32(bmpFile); // 保留
-		bmpImageoffset = read32(bmpFile); // 数据偏移
-		(void)read32(bmpFile); // DIB头大小
+	// BMPͷ����
+	if (read16(bmpFile) == 0x4D42) { // BMPǩ��
+		(void)read32(bmpFile); // �ļ���С
+		(void)read32(bmpFile); // ����
+		bmpImageoffset = read32(bmpFile); // ����ƫ��
+		(void)read32(bmpFile); // DIBͷ��С
 		bmpWidth = read32(bmpFile);
 		bmpHeight = read32(bmpFile);
-		if (read16(bmpFile) == 1) { // 色板数
-			bmpDepth = read16(bmpFile); // 色深
-			if (bmpDepth == 24 && read32(bmpFile) == 0) { // 仅支持24位无压缩
+		if (read16(bmpFile) == 1) { // ɫ����
+			bmpDepth = read16(bmpFile); // ɫ��
+			if (bmpDepth == 24 && read32(bmpFile) == 0) { // ��֧��24λ��ѹ��
 				goodBmp = true;
 				rowSize = (bmpWidth * 3 + 3) & ~3;
 				bmpFile.seek(bmpImageoffset);
@@ -144,7 +144,7 @@ void drawBmp(const char* filename, int x, int y) {
 					bmpFile.read(sdbuffer, rowSize);
 					uint8_t* buffptr = sdbuffer;
 					for (int col = 0; col < bmpWidth; col++) {
-						// BMP为BGR格式
+						// BMPΪBGR��ʽ
 						uint8_t b = *buffptr++;
 						uint8_t g = *buffptr++;
 						uint8_t r = *buffptr++;
@@ -156,10 +156,10 @@ void drawBmp(const char* filename, int x, int y) {
 		}
 	}
 	bmpFile.close();
-	if (!goodBmp) Serial.println("BMP格式不支持或解析失败");
+	if (!goodBmp) Serial.println("BMP��ʽ��֧�ֻ����ʧ��");
 }
 
-// 辅助函数
+// ��������
 uint16_t read16(File& f) {
 	uint16_t result;
 	((uint8_t*)&result)[0] = f.read();
@@ -189,10 +189,10 @@ void setup() {
 	Serial.println(F("Initialized"));
 
 	if (!SD.begin()) {
-		Serial.println("SD卡初始化失败！");
+		Serial.println("SD����ʼ��ʧ�ܣ�");
 		while (1);
 	}
-	Serial.println("SD卡初始化成功");
+	Serial.println("SD����ʼ���ɹ�");
 
 	status.setTouchedState(0);
 	DrawImage(status);
