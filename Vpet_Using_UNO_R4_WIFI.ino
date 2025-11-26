@@ -69,7 +69,7 @@ public:
 	uint16_t touch() {
 		touched = true;
 		touchCount++;
-		touched_state = random(0, 5);//max status num is 5
+		touched_state = random(1, 4);//max status num is 5
 		return touched_state;
 	}
 
@@ -192,7 +192,7 @@ void setup() {
 		Serial.println("SD卡初始化失败！");
 		while (1);
 	}
-	Serial.println("SD卡初始化成功");
+	Serial.println("SD����ʼ���ɹ�");
 
 	// 再初始化屏幕和触摸
 	ts.begin();
@@ -217,6 +217,7 @@ void loop() {
 		status.touch();
 		if (status.getTouchCount() == 5) {
 			//触摸5次，咬住鼠标2秒
+			status.setTouchedState(4);
 			DrawImage(status);
 			for (int i = 0; i < 200; i++) {
 				Mouse.move(100, 100);
@@ -230,6 +231,7 @@ void loop() {
 		}
 		else {
 			status.setTouchedState(random(1, 4));
+			DrawImage(status);
 			delay(2000);
 			status.setTouchedState(0);
 			status.update();
