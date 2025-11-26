@@ -15,7 +15,8 @@
 
 #define CS_PIN  4
 #define TIRQ_PIN  3
-XPT2046_Touchscreen ts(CS_PIN, TIRQ_PIN);  // Param 2 - Touch IRQ Pin - interrupt enabled polling
+// 如果不用中断，建议如下初始化
+XPT2046_Touchscreen ts(CS_PIN, -1);
 
 #if defined(ARDUINO_FEATHER_ESP32) // Feather Huzzah32
 #define TFT_CS         14
@@ -28,21 +29,12 @@ XPT2046_Touchscreen ts(CS_PIN, TIRQ_PIN);  // Param 2 - Touch IRQ Pin - interrup
 #define TFT_DC         5
 
 #else
-// For the breakout board, you can use any 2 or 3 pins.
-// These pins will also work for the 1.8" TFT shield.
 #define TFT_CS        10
 #define TFT_RST        -1
 #define TFT_DC         7
 #endif
 
 Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
-
-/*
-要实现的功能：使用UNO R4 WIFI实现一个虚拟桌宠
-1.在桌宠启动的时候，可以显示一个图片，或者如果允许，可以显示一个动画，在未操作的时候一直是这样的
-2.当触摸屏幕的时候，桌宠可以显示出另外的图片或者动画，之后过几秒回到原来的状态
-3.当触摸次数过多的时候，桌宠会“气急败坏”，然后会“咬住”你的鼠标几秒（此时你的鼠标动不了），然后回到初始状态
-*/
 
 static uint16_t count = 0;
 static uint16_t iscontrol = 0;
@@ -77,7 +69,7 @@ public:
 	uint16_t touch() {
 		touched = true;
 		touchCount++;
-		touched_state = random(0, 5);//最大的状态数量是5
+		touched_state = random(0, 5);//max status num is 5
 		return touched_state;
 	}
 
@@ -107,35 +99,43 @@ void DrawImage(Status status) {
 	}
 }
 
-// BMP图片显示函数（简化版，适用于24位BMP，320x240）
+// BMP pic showing function(simpilfied version from Adafruit)
 void drawBmp(const char* filename, int x, int y) {
 	File bmpFile;
-	int bmpWidth, bmpHeight;   // 图片宽高
-	uint8_t bmpDepth;          // 色深
-	uint32_t bmpImageoffset;   // 数据偏移
-	uint32_t rowSize;          // 每行字节数
-	uint8_t sdbuffer[3 * 320];   // 一行像素缓存
-	uint8_t buffidx = sizeof(sdbuffer);
+	int bmpWidth, bmpHeight;
+	uint8_t bmpDepth;
+	uint32_t bmpImageoffset;
+	uint32_t rowSize;
+	uint8_t sdbuffer[3 * 320];
 	bool goodBmp = false;
+
+	Serial.print("Try to open the pic file: ");
+	Serial.println(filename);
 
 	bmpFile = SD.open(filename);
 	if (!bmpFile) {
-		Serial.print("找不到图片文件: ");
+		Serial.print("Cannot open the pic file: ");
 		Serial.println(filename);
 		return;
 	}
 
-	// BMP头解析
-	if (read16(bmpFile) == 0x4D42) { // BMP签名
-		(void)read32(bmpFile); // 文件大小
-		(void)read32(bmpFile); // 保留
-		bmpImageoffset = read32(bmpFile); // 数据偏移
-		(void)read32(bmpFile); // DIB头大小
+	if (read16(bmpFile) == 0x4D42) {
+		Serial.println("BMP is correct");
+		(void)read32(bmpFile);
+		(void)read32(bmpFile);
+		bmpImageoffset = read32(bmpFile);
+		(void)read32(bmpFile);
 		bmpWidth = read32(bmpFile);
 		bmpHeight = read32(bmpFile);
-		if (read16(bmpFile) == 1) { // 色板数
-			bmpDepth = read16(bmpFile); // 色深
-			if (bmpDepth == 24 && read32(bmpFile) == 0) { // 仅支持24位无压缩
+		Serial.print("pic size: ");
+		Serial.print(bmpWidth);
+		Serial.print("x");
+		Serial.println(bmpHeight);
+		if (read16(bmpFile) == 1) {
+			bmpDepth = read16(bmpFile);
+			Serial.print("color depth: ");
+			Serial.println(bmpDepth);
+			if (bmpDepth == 24 && read32(bmpFile) == 0) {
 				goodBmp = true;
 				rowSize = (bmpWidth * 3 + 3) & ~3;
 				bmpFile.seek(bmpImageoffset);
@@ -144,22 +144,20 @@ void drawBmp(const char* filename, int x, int y) {
 					bmpFile.read(sdbuffer, rowSize);
 					uint8_t* buffptr = sdbuffer;
 					for (int col = 0; col < bmpWidth; col++) {
-						// BMP为BGR格式
 						uint8_t b = *buffptr++;
 						uint8_t g = *buffptr++;
 						uint8_t r = *buffptr++;
 						uint16_t color = tft.color565(r, g, b);
-						tft.drawPixel(x + col, y + bmpHeight - row - 1, color);
 					}
 				}
+				Serial.println("pic showing finished");
 			}
 		}
 	}
 	bmpFile.close();
-	if (!goodBmp) Serial.println("BMP格式不支持或解析失败");
+	if (!goodBmp) Serial.println("BMP format is not approved or failed to parse");
 }
-
-// 辅助函数
+// read 16 or 32 bits from the SD card file
 uint16_t read16(File& f) {
 	uint16_t result;
 	((uint8_t*)&result)[0] = f.read();
@@ -178,24 +176,33 @@ uint32_t read32(File& f) {
 // the setup function runs once when you press reset or power the board
 void setup() {
 	Serial.begin(115200);
+	Serial.println(F("Starting"));
 	Mouse.begin();
 
 	pinMode(D9, OUTPUT);
 	digitalWrite(D9, HIGH);
 
-	ts.begin();
-	ts.setRotation(3);
-	tft.init(240, 320);
-	Serial.println(F("Initialized"));
+	pinMode(TFT_CS, OUTPUT);
+	digitalWrite(TFT_CS, HIGH); // 屏幕片选拉高，防止干扰
+	pinMode(CS_PIN, OUTPUT);
+	digitalWrite(CS_PIN, HIGH); // SD卡片选拉高，初始化前先拉高
 
-	if (!SD.begin()) {
+	// 先初始化SD卡
+	if (!SD.begin(CS_PIN)) {
 		Serial.println("SD卡初始化失败！");
 		while (1);
 	}
 	Serial.println("SD卡初始化成功");
 
+	// 再初始化屏幕和触摸
+	ts.begin();
+	ts.setRotation(3);
+	tft.init(240, 320);
+	Serial.println(F("屏幕初始化完成"));
+
 	status.setTouchedState(0);
 	DrawImage(status);
+	delay(5000);
 	tft.setRotation(1);
 }
 
@@ -211,18 +218,23 @@ void loop() {
 		if (status.getTouchCount() == 5) {
 			//触摸5次，咬住鼠标2秒
 			DrawImage(status);
-			Mouse.press(MOUSE_LEFT);
-			delay(2000);
-			Mouse.release(MOUSE_LEFT);
+			for (int i = 0; i < 200; i++) {
+				Mouse.move(100, 100);
+				delay(10);
+			}
 			status.setTouchedState(0);
 			status.resetTouchCount();
 			status.update();
+			DrawImage(status);
+			delay(5000);
 		}
 		else {
 			status.setTouchedState(random(1, 4));
 			delay(2000);
 			status.setTouchedState(0);
 			status.update();
+			DrawImage(status);
+			delay(5000);
 		}
 	}
 }
